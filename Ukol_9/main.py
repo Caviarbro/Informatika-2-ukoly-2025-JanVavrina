@@ -1,12 +1,20 @@
 import argparse
-import sys
+import sys, logging, time
 from models import Product
 from storage import Storage
+
+logging.basicConfig(  
+    level=logging.INFO,  # Loguj vše od INFO výše (DEBUG se ignoruje)  
+    filename='history.log',  # Ulož do souboru  
+    format='%(asctime)s - %(levelname)s - %(message)s' # Přidej čas  
+)
 
 # TODO: Implementovat dekorátor @log_action (zapsat do history.log)
 def log_action(func):
     def wrapper(*args, **kwargs):
         # ... logika logování ...
+
+        logging.info(f"Produkt: {args[1]}, v hodnote: {args[2]} a mnozstvi {args[3]} byl pridan")
         return func(*args, **kwargs)
     return wrapper
 
@@ -18,19 +26,25 @@ class InventoryManager:
     @log_action
     def add_product(self, name: str, price: float, quantity: int):
         # TODO: Vytvořit produkt, přidat do self.products, uložit
+        new_product = Product(name, price, quantity)
+        self.products.append(new_product)
+        self.storage.save_products(self.products)
+
         print(f"Produkt {name} přidán.")
 
     def list_products(self):
         # TODO: Vypsat všechny produkty
-        pass
+        print(*self.products)
 
     def search_products(self, query: str):
         # TODO: Vyhledat produkty obsahující query v názvu
-        pass
+        matching_products = [product for product in self.products if query.lower() in product.name.lower()]
+
+        print(*matching_products)
     
     def total_value(self):
         # TODO: Spočítat celkovou hodnotu
-        pass
+        print(sum((product.price * product.quantity for product in self.products)))
 
 def main():
     parser = argparse.ArgumentParser(description="Systém správy skladu")
@@ -49,6 +63,9 @@ def main():
     search_parser = subparsers.add_parser("search", help="Hledat produkt")
     search_parser.add_argument("--query", required=True, help="Hledaný text")
 
+    # Příkaz 'total'
+    subparsers.add_parser("total", help="Vypsat celkovou hodnotu skladu")
+    
     args = parser.parse_args()
     
     storage = Storage()
@@ -60,7 +77,8 @@ def main():
         manager.list_products()
     elif args.command == "search":
         manager.search_products(args.query)
-    # TODO: Další příkazy
+    elif args.command == "total":
+        manager.total_value()
     else:
         parser.print_help()
 
